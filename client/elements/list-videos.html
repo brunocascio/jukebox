@@ -1,0 +1,42 @@
+<link rel="import" href="../bower_components/polymer/polymer.html">
+<link rel="import" href="../bower_components/paper-elements/paper-elements.html">
+
+<polymer-element name="list-videos" attributes="videos itemClicked">
+	<template>		
+		<style>
+		:host li {
+			list-style: none;
+			vertical-align: middle;
+		}
+
+		:host li img {
+			height: 50px;
+			width: auto;
+		}
+
+		:host li span {
+			vertical-align: top;
+			display: inline-block;
+		}
+
+		:host li span.title {
+			width: 75%;
+		}
+		</style>
+		<ul>
+			<template repeat="{{ v in videos }}">
+				<li on-click="{{itemClicked}}">
+					<span><img src="{{ v.snippet.thumbnails.medium.url}}"></span>
+					<span class="title">{{v.snippet.title}}</span>
+				</li>
+			</template>
+		</ul>
+	</template>
+	<script>
+		Polymer({
+		    publish: {
+		        videos: []
+	      	}
+	    });
+	</script>
+</polymer-element>

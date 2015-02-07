@@ -1,0 +1,70 @@
+<link rel="import" href="../bower_components/polymer/polymer.html">
+<link rel="import" href="../bower_components/paper-elements/paper-elements.html">
+<link rel="import" href="elements/list-videos.html">
+
+<polymer-element name="search-youtube">
+	<script>
+		var io 		= require('socket.io-client');
+		var socket	= io('http://0.0.0.0:3000');
+		var ls 		= window.localStorage;
+	</script>
+	<template>
+		<style>
+		:host #results {
+			background: #fff;
+			max-height: 600px;
+		}
+
+		:host span img {
+			height: 50px;
+			width: auto;
+		}
+		</style>
+		<paper-input label="Búsqueda" value="{{search}}"></paper-input>
+		<paper-spinner active="{{activeSearch}}"></paper-spinner>
+		<paper-shadow id="results" hidden?="{{!activeResult && videosSearch.length == 0}}">
+			<list-videos videos="{{videosSearch}}" itemClicked="{{queue}}"></list-videos>
+		</paper-shadow>
+	</template>
+	<script>
+	    Polymer({
+			search: "",
+			activeSearch: false,
+			activeResult: false,
+			videosSearch: [],
+	    	searchChanged: function() {
+	    		if ( this.search ) 
+	    		{
+	    			var that = this;
+	    			
+	    			// only execute after 1s (prevent multiple queries)
+	    			this.job('search-yt-async', function() { // first arg is the name of the "job"
+
+	    				var these = that;
+
+	    				these.activeSearch = true
+
+			    		socket.emit('search', these.search, function(data) {
+		    				these.videosSearch = []
+		    				these.activeResult = true
+		    				these.activeSearch = false
+		    				if ( !data.errno ){
+			    				these.videosSearch = data.items
+		    				}
+		    			});
+    				}, 1000);
+
+	    		} else {
+	    			this.activeSearch = false
+	    			this.videosSearch = []
+	    		}
+	    	},
+	    	queue: function(event, detail, sender){
+		    	var video = event.target.templateInstance.model.v;
+			    this.videosSearch = []
+			    this.activeResult =  false
+			    socket.emit('addVideo', video);
+		    }
+	    });
+	</script>
+</polymer-element>

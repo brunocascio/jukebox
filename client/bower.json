@@ -1,0 +1,27 @@
+{
+  "name": "JukeboxClient",
+  "version": "0.0.1",
+  "authors": [
+    "Bruno Cascio <brunocascio@gmail.com>"
+  ],
+  "description": "Jukebox for network music",
+  "main": "index.html",
+  "keywords": [
+    "jukebox"
+  ],
+  "license": "MIT",
+  "homepage": "index.html",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ],
+  "dependencies": {
+    "polymer": "Polymer/polymer#~0.5.1",
+    "core-ajax": "Polymer/core-ajax#~0.5.1",
+    "paper-elements": "Polymer/paper-elements#~0.5.1",
+    "app-router": "~2.1.0"
+  }
+}

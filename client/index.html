@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+	<title>Cliente</title>
+	<link href='http://fonts.googleapis.com/css?family=Open+Sans+Condensed:300' rel='stylesheet' type='text/css'>
+	<link rel="import" href="bower_components/app-router/app-router.html">
+	<link rel="import" href="elements/login-element.html">
+	<link rel="import" href="home.html">
+	<style type="text/css">
+		body {
+			font-family: 'Open Sans Condensed', sans-serif;
+		}
+	</style>
+	<script>
+		var io = require('socket.io-client')
+		var socket	= io('http://0.0.0.0:3000');	// connect with server
+		var ls 		= window.localStorage;	// localStorage
+
+		// save access token
+		socket.on('accessToken', function(msg){
+			console.log('Client: ' + msg.token)
+			var token = ls.setItem('token', msg.token)
+		});
+	</script>
+</head>
+<body unresolved fullbleed>
+	
+	<app-router mode="auto|pushstate|hash">
+      <!-- matches an exact path -->
+      <app-route path="*" element="home-element"></app-route>
+
+      <!-- matches everything else -->
+      <app-route path="*" element="login-element"></app-route>
+
+    </app-router>
+	
+</body>
+</html>

@@ -1,0 +1,8 @@
+{
+  "name": "JukeboxClient",
+  "main": "index.html",
+  "dependencies": {
+    "polymer": "^0.4.1",
+    "socket.io-client": "^1.2.1"
+  }
+}

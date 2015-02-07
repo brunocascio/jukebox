@@ -1,0 +1,39 @@
+<link rel="import" href="../bower_components/polymer/polymer.html">
+<link rel="import" href="../bower_components/paper-elements/paper-elements.html">
+
+<polymer-element name="login-element">
+	<script>
+		var io 		= require('socket.io-client');
+		var socket	= io('http://0.0.0.0:3000');
+		var ls 		= window.localStorage;
+		var router;
+	</script>
+	<template>
+		<div layout vertical center>
+	    	<paper-input label="Username" value="{{username}}"></paper-input>
+	    	<paper-input-decorator label="Password" labelVisible="true">
+    	    	<input is="core-input" type="password" value="{{password}}">
+    	    </paper-input-decorator>
+	    	<paper-button on-click="{{submit}}" raised class="colored" role="button" tabindex="0">Entrar</paper-button>
+		</div>
+	</template>
+	<script>
+	    Polymer({
+	    	username: "",
+	    	password: "",
+	    	ready: function(){
+	    		router = document.querySelector('app-router')
+	    	},
+	    	submit: function(){
+	    		socket.emit('login', { username:this.username, password:this.password }, function(data){
+	    			if ( data.error ){
+	    				console.log(data.error.code)
+	    			} else {
+	    				ls.setItem('token', data.token)
+	    				router.go('/home');
+	    			}
+	    		})
+	    	}
+	    });
+	</script>
+</polymer-element>

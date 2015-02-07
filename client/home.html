@@ -1,0 +1,140 @@
+<link rel="import" href="bower_components/polymer/polymer.html">
+<link rel="import" href="bower_components/google-youtube/google-youtube.html">
+<link rel="import" href="bower_components/core-toolbar/core-toolbar.html">
+<link rel="import" href="bower_components/paper-elements/paper-elements.html">
+<link rel="import" href="bower_components/core-icons/av-icons.html">
+<link rel="import" href="bower_components/paper-icon-button/paper-icon-button.html">
+<link rel="import" href="bower_components/paper-progress/paper-progress.html">
+<link rel="import" href="elements/search-youtube.html">
+<link rel="import" href="elements/list-videos.html">
+
+<polymer-element name="home-element">
+	<script>
+		var io 		= require('socket.io-client');
+		var socket	= io('http://0.0.0.0:3000');
+		var ls 		= window.localStorage;
+	</script>
+	<template id="home-element">
+		<style>
+			:host paper-progress {
+				vertical-align: middle;
+			}
+			paper-progress::shadow #activeProgress {
+			  background-color: #e91e63;
+			}
+		</style>
+		<core-toolbar>
+			<div>JUKEBOX</div>
+			<search-youtube></search-youtube>
+		</core-toolbar>
+		<div layout horizontal>
+			<div left id="player">
+		    	
+		    	<google-youtube 
+		    		id="googleyoutube"
+					videoid="{{videoId}}"
+					controls="0"
+					showinfo="0"
+					theme="light"
+			    	width="250px"
+			    	modestbranding="1"
+			    	color="white"
+			    	iv_load_policy="3"
+			    	state="{{state}}"
+					height="250px"
+					autoplay="0"
+					currenttime="{{currentTime}}"
+                    currenttimeformatted="{{currentTimeFormatted}}"
+                    duration="{{duration}}"
+                    durationformatted="{{durationFormatted}}"
+                    fractionloaded="{{fractionLoaded}}">
+		   		</google-youtube>
+
+		   		<div class="bar-player" layout vertical center>
+   			        <span>
+   			        	{{currentTimeFormatted}}
+   			        	<paper-progress value="{{currentTime*1}}" max="{{duration}}" center></paper-progress>
+   			        	{{durationFormatted}}
+   			        </span>
+   			        <div class="buttons">
+   			        	<paper-icon-button icon="av:play-circle-outline" on-click="{{playClick}}" hidden?="{{state==1}}"></paper-icon-button>
+   			        	<paper-icon-button icon="av:pause-circle-outline" on-click="{{pauseClick}}" hidden?="{{state!=1}}"></paper-icon-button>
+   			        	<paper-icon-button icon="av:fast-forward" on-click="{{nextClick}}"></paper-icon-button>
+   			        </div>
+		   		</div>
+		   	</div> <!-- #player -->
+		   	<div right>
+		   		<list-videos videos="{{queueV}}" itemClicked="{{itemClick}}"></list-videos>
+		   	</div>
+		</div>
+	</template>
+	<script>
+		var that;
+		var googleYouTube;
+	    Polymer({
+	    	queueV: [],
+	    	videoId: '',
+	    	ready: function(){
+	    		that = this;
+
+	    		socket.emit('queueVideos', function(list){
+	    			that.queueV = list
+	    			that.queueV = JSON.parse(ls.getItem('videos'))
+	    			console.log(that.queueV)
+	    		});
+
+	    		socket.on('newVideo', function(data){
+	    			that.queueV.push(data)
+	    			ls.setItem('videos', JSON.stringify(that.queueV))
+	    		});
+
+	    		socket.on('playNewSong', function(data){
+	    			googleYouTube.play();
+	    		});
+
+    			googleYouTube = this.$.googleyoutube;
+
+    			googleYouTube.addEventListener('google-youtube-state-change', function(e) {
+    				var currentState = e.detail.data;
+    				
+    				// end media, dequeue other if exist
+    				if ( currentState === 0 ) {
+    					
+    					that.loadNextVideo()
+    				}
+    			});
+
+    			googleYouTube.addEventListener('google-youtube-error', function(e) {
+    				console.error('YouTube playback error', e.detail);
+    			});
+
+    			googleYouTube.addEventListener('google-youtube-ready', function(e) {
+    				that.videoId = 'juRUOGv1T2k'
+    			});
+	    	},
+	    	loadNextVideo: function() {
+				if ( that.queueV.length ) {
+
+		    		var video = that.queueV.shift()
+		    		that.videoId = video.id.videoId
+
+					socket.emit('loadNewVideo', {videoId: that.videoId});
+				}
+	    	},
+	    	itemClick: function(event, detail, sender){
+	    		var video = event.target.templateInstance.model.v;
+	    		that.videoId = video.id.videoId
+	    	},
+	    	playClick: function(event, detail, sender) {
+	    		googleYouTube.play();
+	    	},
+	    	pauseClick: function(event, detail, sender) {
+	    		googleYouTube.pause();
+	    	},
+	    	nextClick: function(event, detail, sender) {
+	    		that.loadNextVideo()
+	    	},
+	    });
+
+	</script>
+</polymer-element>
