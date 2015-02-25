@@ -1,0 +1,65 @@
+<link rel="import" href="components/polymer/polymer.html">
+
+<link rel="import" href="components/core-icons/core-icons.html">
+<link rel="import" href="components/core-icon/core-icon.html">
+<link rel="import" href="components/core-image/core-image.html">
+<link rel="import" href="components/core-list/core-list.html">
+
+<polymer-element name="item-list" attributes="model hideStadistics itemClick">
+    <template>
+        <style>
+            :host .item {
+                height: 80px;
+                font-size: 0.9rem;
+                background-color: #fff;
+                border-bottom: 1px solid #D1FFD7;
+                padding: 5px;
+            }
+            :host .description {
+                margin: 0 20px;
+            }
+            :host .description .stadistics{
+                margin: 10px auto;
+            }
+            :host .description .stadistics .stadistic {
+                margin: auto 10px auto 0;
+            }
+            :host .description core-icon{
+                height: 15px;
+                width: 15px;
+            }
+        </style>
+        <div class="row item" layout vertical flex on-click="{{itemClick}}">
+            <div layout horizontal>
+                <core-image src="{{model.artwork_url}}" preload sizing="cover" height="80" width="80">
+                </core-image>
+                <div class="description">
+                    <span class="title">{{model.title}}</span>
+                    <div class="metadata">
+                        <span>
+                            Format: {{model.original_format}}
+                        </span>
+                    </div>
+                    <div class="stadistics" hidden?="{{hideStadistics}}">
+                        <span class="light-grey stadistic fav-count">
+                            <core-icon icon="favorite-outline" class="dark-green"></core-icon>
+                            {{model.favoritings_count}}
+                        </span>
+                        <span class="light-grey stadistic play-count">
+                            <core-icon icon="send" class="dark-green"></core-icon>
+                            {{model.playback_count}}
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </template>
+    <script>
+    Polymer({
+        ready: function() {
+           this.model = this.model || {};
+           this.hideStadistics = this.hideStadistics || false;
+        }
+    });
+    </script>
+</polymer-element>

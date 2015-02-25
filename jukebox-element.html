@@ -1,0 +1,228 @@
+<script src="components/webcomponentsjs/webcomponents.js"></script>
+<link rel="import" href="components/polymer/polymer.html">
+
+<link rel="import" href="components/core-icons/core-icons.html">
+<link rel="import" href="components/core-icons/av-icons.html">
+<link rel="import" href="components/core-icon/core-icon.html">
+<link rel="import" href="components/core-icon-button/core-icon-button.html">
+<link rel="import" href="components/core-image/core-image.html">
+<link rel="import" href="components/core-ajax/core-ajax.html">
+<link rel="import" href="components/paper-shadow/paper-shadow.html">
+<link rel="import" href="components/core-list/core-list.html">
+<link rel="import" href="components/paper-input/paper-input.html">
+<link rel="import" href="components/core-drawer-panel/core-drawer-panel.html">
+<link rel="import" href="components/core-toolbar/core-toolbar.html">
+<link rel="import" href="components/paper-slider/paper-slider.html">
+
+<link rel="import" href="item-list.html">
+
+<polymer-element name="jukebox-element">
+    <template>
+		<style type="text/css">
+			paper-input /deep/ ::-webkit-input-placeholder {
+				/* platform specific rules for placeholder text */
+				color: #D1FFD7 !important;
+			}
+			paper-input /deep/ .unfocused-underline {
+				/* line color when the input is focused */
+				background-color: #D1FFD7;
+			}
+			paper-input /deep/ .focused-underline {
+				/* line color when the input is focused */
+				background-color: #D1FFD7;
+			}
+			#player {
+				margin: 10px auto;
+				text-align: center;
+			}
+			#player-buttons core-icon-button /deep/ core-icon {
+				width: 50px;
+				height: 50px;
+			}
+			#player-buttons paper-slider {
+				vertical-align: middle;
+			}
+			paper-slider::shadow #sliderBar::shadow #activeProgress {
+				background-color: #B3FFB3;
+			}
+			paper-slider::shadow #sliderKnobInner {
+				background-color: #808782;
+			}
+			.bold {
+				font-weight: bolder;
+			}
+			core-list {
+				margin: 10px 20px;
+				background-color: #fff;
+			}
+			core-header-panel {
+				background-color: white;
+			}
+		</style>	
+
+		<core-drawer-panel drawerWidth="350px">
+			<core-header-panel drawer>
+			  <core-toolbar class="dark-green-background">
+			    <div class="light-green bold">JUKEBOX</div>
+			  </core-toolbar>
+			  <div id="player">
+			    <core-image src="http://lorempixel.com/400/200/sports/Dummy-Text/" 
+			      preload 
+			      sizing="cover" 
+			      height="200" 
+			      width="330">
+			    </core-image>
+			    <div id="player-buttons">
+			    	<core-icon-button 
+			    		icon="av:play-circle-outline" 
+			    		class="dark-grey" 
+			    		hidden?="{{isPlaying}}"
+			    		on-click="{{playOrResume}}">
+			    	</core-icon-button>
+			    	<core-icon-button 
+			    		hidden?="{{!isPlaying}}"
+			    		icon="av:pause-circle-outline" 
+			    		class="dark-grey"
+			    		on-click="{{pause}}">
+			    	</core-icon-button>
+			    	<paper-slider min="0" max="200" value="110"></paper-slider>
+			    </div>
+			  </div>
+			  <core-list id="list-queue" data="{{songsQueue}}" flex tabindex="-1" height="40" style="height:{{height/2}}px; overflow-y: auto;">
+		  		<template>
+		  			<item-list model="{{model}}" hideStadistics="{{true}}"></item-list>
+		  		</template>
+		  	  </core-list>
+			</core-header-panel>
+			<core-header-panel main>
+				<core-toolbar class="dark-green-background">
+			    	<paper-input label="Búsqueda" value="{{q}}"></paper-input>
+			  	</core-toolbar>
+		  		<core-list id="list-search" data="{{searchResults}}" flex tabindex="-1" height="80" style="height:{{height}}px; overflow-y: auto;">
+		  		  <template>
+		  		  	<item-list model="{{model}}" hideStadistics="{{false}}" itemClick="{{pushInQueue}}"></item-list>
+		  		  </template>
+		  		</core-list>
+			</core-header-panel>
+		</core-drawer-panel>
+    </template>
+      
+  <script src="//connect.soundcloud.com/sdk.js"></script>
+  <script src="js/soundmanager2.js"></script>
+  <script src="js/main.js"></script>
+  <script>
+  	(function() {
+
+	  	var songsQueue = [];
+	  	var sManager = {};
+	  	var currentSong = {};
+	  	var isPlaying = false;
+
+	    Polymer('jukebox-element', {
+	    	app: {},
+	    	sManager:{},
+	    	scLoaded: false,
+	    	q: '',
+	    	searchResults: [],
+	    	height: window.innerHeight - 80,
+			ready: function() {
+				console.log('ready...')
+				
+				that = this;
+
+				this.songsQueue = songsQueue;
+				this.currentSong = currentSong;
+				this.isPlaying = isPlaying;
+
+				app.init(function(){
+					// Initilize global player
+					that.sManager = soundManager.setup({
+						preferFlash: false,
+						onready: function() {
+							console.log('SM2 ready!');
+						},
+						ontimeout: function() {
+							console.log('SM2 init failed!');
+						},
+						defaultOptions: {
+							volume: 90
+						}
+					});
+				});
+				app.soundCloud.connect(function(){
+					that.scLoaded = true;
+				});
+			},
+			qChanged: function(oldVal, newVal){
+				var that = this;
+				if ( this.scLoaded && newVal ) {
+		        	this.job('search', function(){
+		        		app.soundCloud.search(newVal, function(tracks) {
+		        			if ( tracks !== undefined && tracks.length > 0 ){
+		        		    	that.searchResults = tracks;
+		        		    	console.log(tracks[0])
+		        			}
+		        		}); // end search
+		        	}, 800);
+		        }
+			},
+			pushInQueue: function(event, detail, sender){
+				// get soundcloud object
+				var songClicked = event.target.templateInstance.model.model;
+
+				// enqueue only if not enqueued
+				var exists = false;
+				for (var i = that.songsQueue.length - 1; i >= 0; i--) {
+					if ( that.songsQueue[i].id === songClicked.id ) {
+						exists = true;
+						break;
+					}
+				};
+
+				if (!exists) that.songsQueue.push(songClicked);
+			},
+			playOrResume: function() {
+				// if not set a song
+				if ( !this.sManager.playState ) {
+					
+					// if songs is not empty
+					if ( this.songsQueue.length > 0 ) {
+						
+						// dequeue next song
+						this.currentSong = this.songsQueue.shift();
+
+						//stream!
+						SC.stream('/tracks/'+this.currentSong.id,{
+							autoPlay: true,
+							onplay: function(){
+								that.isPlaying = true;
+							},
+							onresume: function(){
+								that.isPlaying = true;
+							},
+							onpause: function() {
+								that.isPlaying = false;
+							},
+							onstop: function() {
+								that.isPlaying = false;
+							},
+							onfinish: function() {
+								that.isPlaying = false;
+								// recall
+								that.playOrResume();	
+							}
+						}, function(sound){
+		                	that.sManager = sound;
+		                });
+					}
+				} else {
+					this.sManager.play();
+				}
+			},
+			pause: function() {
+				this.sManager.pause();
+			}
+	    });
+	})();
+  </script>
+</polymer-element>
