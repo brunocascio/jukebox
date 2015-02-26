@@ -12,7 +12,7 @@
 <link rel="import" href="components/paper-input/paper-input.html">
 <link rel="import" href="components/core-drawer-panel/core-drawer-panel.html">
 <link rel="import" href="components/core-toolbar/core-toolbar.html">
-<link rel="import" href="components/paper-slider/paper-slider.html">
+<link rel="import" href="components/paper-progress/paper-progress.html">
 
 <link rel="import" href="item-list.html">
 
@@ -31,32 +31,39 @@
 				/* line color when the input is focused */
 				background-color: #D1FFD7;
 			}
+			.bold {
+				font-weight: bolder;
+			}
+			core-header-panel {
+				background-color: white;
+			}
+			core-list {
+				background-color: #fff;
+			}
 			#player {
 				margin: 10px auto;
+				padding: 0 10px; 
 				text-align: center;
+			}
+			#player core-image {
+				height: 200px;
+				width: 100%;
+				margin: 0 auto;
 			}
 			#player-buttons core-icon-button /deep/ core-icon {
 				width: 50px;
 				height: 50px;
 			}
-			#player-buttons paper-slider {
-				vertical-align: middle;
+			paper-progress {
+				width: 100%;
 			}
-			paper-slider::shadow #sliderBar::shadow #activeProgress {
-				background-color: #B3FFB3;
+			paper-progress::shadow #activeProgress {
+			  background-color: #B3FFB3;
 			}
-			paper-slider::shadow #sliderKnobInner {
-				background-color: #808782;
-			}
-			.bold {
-				font-weight: bolder;
-			}
-			core-list {
-				margin: 10px 20px;
-				background-color: #fff;
-			}
-			core-header-panel {
-				background-color: white;
+			To change the secondary progress bar color:
+
+			paper-progress::shadow #secondaryProgress {
+			  background-color: #D1FFD7;
 			}
 		</style>	
 
@@ -67,25 +74,34 @@
 			  </core-toolbar>
 			  <div id="player">
 			    <core-image src="http://lorempixel.com/400/200/sports/Dummy-Text/" 
-			      preload 
-			      sizing="cover" 
-			      height="200" 
-			      width="330">
+			      preload sizing="cover">
 			    </core-image>
+			    <div>		    	
+				    <paper-progress 
+				    	hidden?="{{currentBuffered==0}}"
+				    	value="{{currentPosition}}" 
+				    	max="{{currentSong.duration}}" 
+				    	secondaryProgress="{{currentBuffered}}">
+				    </paper-progress>
+			    </div>
 			    <div id="player-buttons">
 			    	<core-icon-button 
-			    		icon="av:play-circle-outline" 
+			    		icon="av:play-arrow" 
 			    		class="dark-grey" 
 			    		hidden?="{{isPlaying}}"
 			    		on-click="{{playOrResume}}">
 			    	</core-icon-button>
 			    	<core-icon-button 
 			    		hidden?="{{!isPlaying}}"
-			    		icon="av:pause-circle-outline" 
+			    		icon="av:pause" 
 			    		class="dark-grey"
 			    		on-click="{{pause}}">
 			    	</core-icon-button>
-			    	<paper-slider min="0" max="200" value="110"></paper-slider>
+			    	<core-icon-button 
+			    		icon="av:fast-forward" 
+			    		class="dark-grey"
+			    		on-click="{{loadNextSong}}">
+			    	</core-icon-button>
 			    </div>
 			  </div>
 			  <core-list id="list-queue" data="{{songsQueue}}" flex tabindex="-1" height="40" style="height:{{height/2}}px; overflow-y: auto;">
@@ -117,9 +133,11 @@
 	  	var sManager = {};
 	  	var currentSong = {};
 	  	var isPlaying = false;
+	  	var currentBuffered = 0;
+	  	var currentPosition = 0;
 
 	    Polymer('jukebox-element', {
-	    	app: {},
+	    	jukebox: {},
 	    	sManager:{},
 	    	scLoaded: false,
 	    	q: '',
@@ -134,22 +152,52 @@
 				this.currentSong = currentSong;
 				this.isPlaying = isPlaying;
 
-				app.init(function(){
+				jukebox.init(function(){
 					// Initilize global player
 					that.sManager = soundManager.setup({
 						preferFlash: false,
-						onready: function() {
-							console.log('SM2 ready!');
-						},
-						ontimeout: function() {
-							console.log('SM2 init failed!');
-						},
 						defaultOptions: {
-							volume: 90
+							autoPlay: true,
+							volume: 90,
+							onready: function() {
+								console.log('SM2 ready!');
+							},
+							ontimeout: function() {
+								console.log('SM2 init failed!');
+							},
+							onplay: function(){
+								that.isPlaying = true;
+							},
+							onresume: function(){
+								that.isPlaying = true;
+							},
+							onpause: function() {
+								that.isPlaying = false;
+							},
+							onstop: function() {
+								that.isPlaying = false;
+							},
+							onfinish: function() {
+								that.destroyCurrentSong();
+								// recall
+								that.playOrResume();	
+							},
+							whileloading: function(){
+								// use the last value locally
+								var buffered = 0;
+								for (var i = 0; i < this.buffered.length; i++) {
+									buffered = (this.buffered[i].end - this.buffered[i].start);
+								};
+								// linear case, buffer sum; does not account for seeking and HTTP partials / byte ranges
+								that.currentBuffered = buffered;
+							},
+							whileplaying: function() {
+								that.currentPosition = this.position;
+							}
 						}
 					});
 				});
-				app.soundCloud.connect(function(){
+				jukebox.app.connect(function(){
 					that.scLoaded = true;
 				});
 			},
@@ -157,7 +205,7 @@
 				var that = this;
 				if ( this.scLoaded && newVal ) {
 		        	this.job('search', function(){
-		        		app.soundCloud.search(newVal, function(tracks) {
+		        		jukebox.app.search(newVal, function(tracks) {
 		        			if ( tracks !== undefined && tracks.length > 0 ){
 		        		    	that.searchResults = tracks;
 		        		    	console.log(tracks[0])
@@ -185,33 +233,12 @@
 				// if not set a song
 				if ( !this.sManager.playState ) {
 					
-					// if songs is not empty
 					if ( this.songsQueue.length > 0 ) {
 						
 						// dequeue next song
 						this.currentSong = this.songsQueue.shift();
 
-						//stream!
-						SC.stream('/tracks/'+this.currentSong.id,{
-							autoPlay: true,
-							onplay: function(){
-								that.isPlaying = true;
-							},
-							onresume: function(){
-								that.isPlaying = true;
-							},
-							onpause: function() {
-								that.isPlaying = false;
-							},
-							onstop: function() {
-								that.isPlaying = false;
-							},
-							onfinish: function() {
-								that.isPlaying = false;
-								// recall
-								that.playOrResume();	
-							}
-						}, function(sound){
+						jukebox.app.stream(this.currentSong.id, function(sound){
 		                	that.sManager = sound;
 		                });
 					}
@@ -221,6 +248,22 @@
 			},
 			pause: function() {
 				this.sManager.pause();
+			},
+			loadNextSong: function() {
+				// if playing or buffering sound (play has been called, waiting for data etc.)
+				// and queue songs is not empty
+				if ( this.sManager.playState ) {
+					this.destroyCurrentSong();
+				}
+				this.playOrResume();
+			},
+			destroyCurrentSong: function() {
+				this.sManager.destruct();
+				this.sManager.unload();
+				this.currentSong = {};
+				this.isPlaying = false;
+				this.currentBuffered = 0;
+	  			this.currentPosition = 0;
 			}
 	    });
 	})();

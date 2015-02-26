@@ -8,12 +8,12 @@
 <polymer-element name="item-list" attributes="model hideStadistics itemClick">
     <template>
         <style>
-            :host .item {
+            :host .item{
                 height: 80px;
                 font-size: 0.9rem;
                 background-color: #fff;
                 border-bottom: 1px solid #D1FFD7;
-                padding: 5px;
+                padding: 10px !important;
             }
             :host .description {
                 margin: 0 20px;
@@ -36,9 +36,8 @@
                 <div class="description">
                     <span class="title">{{model.title}}</span>
                     <div class="metadata">
-                        <span>
-                            Format: {{model.original_format}}
-                        </span>
+                        <span>Format: {{model.original_format}}</span>
+                        <span>Duration: {{millToMinutes(model.duration)}}</span>
                     </div>
                     <div class="stadistics" hidden?="{{hideStadistics}}">
                         <span class="light-grey stadistic fav-count">
@@ -59,6 +58,15 @@
         ready: function() {
            this.model = this.model || {};
            this.hideStadistics = this.hideStadistics || false;
+        },
+        millToMinutes: function(ms){
+            min = Math.floor((ms/1000/60) << 0),
+            sec = Math.floor((ms/1000) % 60);
+            // add 0 if seconds is < 10
+            if ( sec < 10 )
+                sec += '0';
+
+            return (min + ':' + sec);
         }
     });
     </script>
