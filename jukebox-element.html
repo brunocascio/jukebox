@@ -182,6 +182,9 @@
 								// recall
 								that.playOrResume();	
 							},
+							ondataerror:function(){
+								alert("Error when try to play song.");
+							},
 							whileloading: function(){
 								// use the last value locally
 								var buffered = 0;
